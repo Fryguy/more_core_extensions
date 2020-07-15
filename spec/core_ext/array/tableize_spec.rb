@@ -12,6 +12,28 @@ EOF
         expect(test.tableize).to eq(expected)
       end
 
+      it 'with color' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mValue3\e[0m", "Value4"]]
+        expected = <<-EOF
+ Col1   | Col2
+--------|--------
+ Val1   | Val2
+ \e[31mValue3\e[0m | Value4
+EOF
+        expect(test.tableize).to eq(expected)
+      end
+
+      it 'with unterminated color' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mValue3", "Value4"]]
+        expected = <<-EOF
+ Col1   | Col2
+--------|--------
+ Val1   | Val2
+ \e[31mValue3\e[0m | Value4
+EOF
+        expect(test.tableize).to eq(expected)
+      end
+
       it 'with numeric column values right justified' do
         test = [["Col1", "Col2"], ["Val1", 200], ["Value3", 30]]
         expected = <<-EOF
@@ -34,13 +56,13 @@ EOF
         expect(test.tableize).to eq(expected)
       end
 
-      it 'removes color from length' do
-        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mVal\e[0m", "Value4"]]
+      it 'with really long column value and color' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mReally Really Long Value3\e[0m", "Value4"]]
         expected = <<-EOF
- Col1 | Col2
-------|--------
- Val1 | Val2
- \e[31mVal\e[0m | Value4
+ Col1                      | Col2
+---------------------------|--------
+ Val1                      | Val2
+ \e[31mReally Really Long Value3\e[0m | Value4
 EOF
         expect(test.tableize).to eq(expected)
       end
@@ -55,6 +77,62 @@ EOF
 EOF
         expect(test.tableize(:max_width => 10)).to eq(expected)
       end
+
+      it 'with really long column value and color and :max_width option' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mReally Really Long Value3\e[0m", "Value4"]]
+        expected = <<-EOF
+ Col1       | Col2
+------------|--------
+ Val1       | Val2
+ \e[31mReally Rea\e[0m | Value4
+EOF
+        expect(test.tableize(:max_width => 10)).to eq(expected)
+      end
+
+      it 'with really long column value and color and :max_width option that chops off the color' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["Really Really Long \033[31mValue3\e[0m", "Value4"]]
+        expected = <<-EOF
+ Col1       | Col2
+------------|--------
+ Val1       | Val2
+ Really Rea | Value4
+EOF
+        expect(test.tableize(:max_width => 10)).to eq(expected)
+      end
+
+      it 'with really long column value and color and :max_width option within an escape sequence' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mReally Really Long Value3\e[0m", "Value4"]]
+        expected = <<-EOF
+ Co | Co
+----|----
+ Va | Va
+ \e[31mRe\e[0m | Va
+EOF
+        expect(test.tableize(:max_width => 2)).to eq(expected)
+      end
+
+      it 'with oversized :max_width option' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["Really Really Long Value3", "Value4"]]
+        expected = <<-EOF
+ Col1                      | Col2
+---------------------------|--------
+ Val1                      | Val2
+ Really Really Long Value3 | Value4
+EOF
+        expect(test.tableize(:max_width => 100)).to eq(expected)
+      end
+
+      it 'with color and oversized :max_width option' do
+        test = [["Col1", "Col2"], ["Val1", "Val2"], ["\033[31mReally Really Long Value3\e[0m", "Value4"]]
+        expected = <<-EOF
+ Col1                      | Col2
+---------------------------|--------
+ Val1                      | Val2
+ \e[31mReally Really Long Value3\e[0m | Value4
+EOF
+        expect(test.tableize(:max_width => 100)).to eq(expected)
+      end
+
 
       it 'with :header => false option' do
         test = [["Col1", "Col2"], ["Val1", "Val2"], ["Value3", "Value4"]]

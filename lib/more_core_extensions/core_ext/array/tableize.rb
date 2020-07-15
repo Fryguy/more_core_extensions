@@ -53,6 +53,9 @@ module MoreCoreExtensions
 
       private
 
+      ANSI_ESCAPE_SEQUENCE = /\e\[[^m]+m/
+      ANSI_RESET = "\e[0m"
+
       def tableize_hashes
         # Convert the target to an Array of Arrays
         keys = options[:columns] || columns_from_hash_keys
@@ -102,8 +105,7 @@ module MoreCoreExtensions
       end
 
       def apply_width!(widths, field, field_i)
-        field_length_sans_color_code = field.to_s.gsub(/\e\[[^m]+m/, '').length
-        widths[field_i] = [widths[field_i].to_i, field_length_sans_color_code].max
+        widths[field_i] = [widths[field_i].to_i, strip_ansi(field.to_s).length].max
         widths[field_i] = [options[:max_width], widths[field_i].to_i].min if options[:max_width]
       end
 
@@ -120,8 +122,21 @@ module MoreCoreExtensions
 
       def format_field(field, width, justification)
         field = field.to_s.gsub(/\n|\r/, '')
-        field = field.slice(0, width) unless field.include?("\e")
+
+        if field.include?("\e")
+          while strip_ansi(field).size > width
+            field.chop!
+          end
+          field << ANSI_RESET if field.include?("\e") && !field.end_with?(ANSI_RESET)
+        else
+          field = field.slice(0, width)
+        end
+
         "%0#{justification}#{width}s" % field
+      end
+
+      def strip_ansi(field)
+        field.gsub(ANSI_ESCAPE_SEQUENCE, '')
       end
 
       def format_table(table, widths)
